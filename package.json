@@ -1,0 +1,45 @@
+{
+  "name": "route-planner",
+  "type": "module",
+  "engines": {
+    "node": ">=22.22.2"
+  },
+  "version": "1.0.0",
+  "description": "An MCP server that generates and exports running routes with OpenRouteService",
+  "author": "",
+  "license": "MIT",
+  "homepage": "https://github.com/mcp-use/mcp-use",
+  "keywords": [
+    "mcp",
+    "mcp-server",
+    "chatgpt plugins",
+    "claude connector",
+    "mcp-app",
+    "mcp-use",
+    "manufact"
+  ],
+  "scripts": {
+    "build": "mcp-use build",
+    "dev": "mcp-use dev",
+    "start": "mcp-use start",
+    "deploy": "mcp-use deploy",
+    "typecheck": "mcp-use typecheck",
+    "stdio": "tsx src/stdio.ts",
+    "probe:ors": "tsx scripts/probe-ors.ts"
+  },
+  "dependencies": {
+    "@mcp-use/client": "^2.1.0",
+    "@modelcontextprotocol/server": "^2.0.0",
+    "mcp-use": "2.1.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.0",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "tsx": "^4.21.0",
+    "typescript": "^7.0.2"
+  }
+}

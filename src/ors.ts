@@ -6,6 +6,7 @@ import type {
   Coordinate,
   ExportFormat,
   ExportRouteResult,
+  LocationSearchResponse,
   PlannedRoute,
   RouteMap,
   RouteSummary,
@@ -156,6 +157,77 @@ export async function exportRunningRoute(input: {
     path,
     message: `Wrote GPX 1.1 track for ${route.total_distance_km.toFixed(2)} km route.`,
   };
+}
+
+export async function searchLocations(input: {
+  query: string;
+  limit?: number;
+  focus_lat?: number;
+  focus_lng?: number;
+  boundary_country?: string;
+}): Promise<LocationSearchResponse> {
+  const apiKey = getOrsApiKey();
+  const query = input.query.trim();
+  if (query.length < 2) {
+    throw new RoutePlannerError("Search query must be at least 2 characters.", "geocode_not_found");
+  }
+
+  const parsed = parseLatLng(query);
+  if (parsed !== undefined) {
+    return {
+      query,
+      results: [
+        {
+          label: `${parsed.lat},${parsed.lng}`,
+          lat: parsed.lat,
+          lng: parsed.lng,
+        },
+      ],
+    };
+  }
+
+  const url = new URL("/geocode/search", ORS_BASE_URL);
+  url.searchParams.set("api_key", apiKey);
+  url.searchParams.set("text", query);
+  url.searchParams.set("size", String(input.limit ?? 5));
+  if (input.focus_lat !== undefined && input.focus_lng !== undefined) {
+    url.searchParams.set("focus.point.lat", String(input.focus_lat));
+    url.searchParams.set("focus.point.lon", String(input.focus_lng));
+  }
+  if (input.boundary_country !== undefined && input.boundary_country.trim() !== "") {
+    url.searchParams.set("boundary.country", input.boundary_country.trim());
+  }
+
+  const response = await fetch(url);
+  await throwForOrsFailure(response);
+  const data = (await response.json()) as GeocodeResponse;
+  const results =
+    data.features
+      ?.map((feature) => {
+        const coordinates = feature.geometry?.coordinates;
+        if (coordinates === undefined) return undefined;
+        return {
+          label: feature.properties?.label ?? feature.properties?.name ?? query,
+          lng: coordinates[0],
+          lat: coordinates[1],
+        };
+      })
+      .filter((result): result is { label: string; lat: number; lng: number } => result !== undefined) ??
+    [];
+
+  if (input.focus_lat !== undefined && input.focus_lng !== undefined) {
+    results.sort(
+      (a, b) =>
+        approximateDistanceKm(a.lat, a.lng, input.focus_lat!, input.focus_lng!) -
+        approximateDistanceKm(b.lat, b.lng, input.focus_lat!, input.focus_lng!),
+    );
+  }
+
+  if (results.length === 0) {
+    throw new RoutePlannerError(`No location results found for "${query}".`, "geocode_not_found");
+  }
+
+  return { query, results };
 }
 
 export function formatPlannerError(error: unknown): string {
@@ -488,6 +560,19 @@ function formatLatLng(coordinate: Coordinate): string {
 
 function distanceDelta(actualMeters: number, targetMeters: number): number {
   return Math.abs(actualMeters - targetMeters) / targetMeters;
+}
+
+function approximateDistanceKm(
+  latA: number,
+  lngA: number,
+  latB: number,
+  lngB: number,
+): number {
+  const latScale = 111;
+  const lngScale = Math.cos(((latA + latB) / 2) * (Math.PI / 180)) * 111;
+  const latDelta = (latA - latB) * latScale;
+  const lngDelta = (lngA - lngB) * lngScale;
+  return Math.hypot(latDelta, lngDelta);
 }
 
 function randomSeed(): number {

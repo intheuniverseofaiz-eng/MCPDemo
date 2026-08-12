@@ -1,5 +1,5 @@
 import { MCPServer } from "mcp-use";
-import { exportRunningRoute, planRunningRoute } from "./src/ors.js";
+import { exportRunningRoute, planRunningRoute, searchLocations } from "./src/ors.js";
 import {
   exportRouteInputSchema,
   exportRouteOutputSchema,
@@ -7,6 +7,8 @@ import {
   openRoutePlannerOutputSchema,
   planRouteInputSchema,
   planRouteOutputSchema,
+  searchLocationsInputSchema,
+  searchLocationsOutputSchema,
   toErrorResult,
 } from "./src/tool-schemas.js";
 
@@ -86,6 +88,38 @@ export const planRoute = server.tool(
       const data = await planRunningRoute(input);
       return {
         content: [{ type: "text", text: data.summary }],
+        structuredContent: data,
+      };
+    } catch (error) {
+      return toErrorResult(error);
+    }
+  },
+);
+
+export const searchLocationsTool = server.tool(
+  {
+    name: "search_locations",
+    title: "Search locations",
+    description:
+      "Search for a start location by place name, landmark, address, or lat,lng. Returns selectable coordinates for the route planner.",
+    inputSchema: searchLocationsInputSchema,
+    outputSchema: searchLocationsOutputSchema,
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: true,
+    },
+  },
+  async (input) => {
+    try {
+      const data = await searchLocations(input);
+      return {
+        content: [
+          {
+            type: "text",
+            text: data.results.map((result) => result.label).join("\n"),
+          },
+        ],
         structuredContent: data,
       };
     } catch (error) {

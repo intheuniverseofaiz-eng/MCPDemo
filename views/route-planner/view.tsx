@@ -43,6 +43,12 @@ type ExportState =
       message: string;
     };
 
+type LocationResult = {
+  label: string;
+  lat: number;
+  lng: number;
+};
+
 type RunType = "speed" | "long" | "recovery";
 
 const DEFAULT_START = "43.6532,-79.3832";
@@ -50,6 +56,7 @@ const DEFAULT_START = "43.6532,-79.3832";
 export default function RoutePlannerView() {
   const view = useToolContext<"open_route_planner">();
   const planRoute = useCallTool("plan_route");
+  const searchLocations = useCallTool("search_locations");
   const exportRoute = useCallTool("export_route");
 
   const plannerDefaults = getPlannerDefaults(view);
@@ -61,6 +68,9 @@ export default function RoutePlannerView() {
 
   const [distanceKm, setDistanceKm] = useState(String(initialDistance));
   const [start, setStart] = useState(initialStart);
+  const [selectedStart, setSelectedStart] = useState<LocationResult | undefined>();
+  const [locationResults, setLocationResults] = useState<LocationResult[]>([]);
+  const [locationMessage, setLocationMessage] = useState<string | undefined>();
   const [runType, setRunType] = useState<RunType>(initialRunType as RunType);
   const [avoidHills, setAvoidHills] = useState(initialAvoidHills);
   const [activeRoute, setActiveRoute] = useState<RouteOutput | undefined>();
@@ -72,6 +82,9 @@ export default function RoutePlannerView() {
   const route = activeRoute;
   const isPending = view.status === "pending" || planRoute.isPending;
   const errorMessage = formError ?? planRoute.error?.message;
+  const routeStart = selectedStart
+    ? `${selectedStart.lat},${selectedStart.lng}`
+    : start;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -87,7 +100,7 @@ export default function RoutePlannerView() {
     try {
       const result = await planRoute.callTool({
         distance_km: parsedDistance,
-        start,
+        start: routeStart,
         run_type: runType,
         avoid_hills: avoidHills,
       });
@@ -95,6 +108,42 @@ export default function RoutePlannerView() {
     } catch (error) {
       setFormError(error instanceof Error ? error.message : String(error));
     }
+  }
+
+  async function handleLocationSearch() {
+    setFormError(undefined);
+    setLocationMessage(undefined);
+    setLocationResults([]);
+
+    try {
+      const result = await searchLocations.callTool({
+        query: start,
+        limit: 5,
+        focus_lat: 43.6532,
+        focus_lng: -79.3832,
+        boundary_country: "CA",
+      });
+      setLocationResults(result.structuredContent.results);
+      if (result.structuredContent.results.length === 0) {
+        setLocationMessage("No matching places found.");
+      }
+    } catch (error) {
+      setLocationMessage(error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  function handleStartChange(value: string) {
+    setStart(value);
+    setSelectedStart(undefined);
+    setLocationResults([]);
+    setLocationMessage(undefined);
+  }
+
+  function selectLocation(result: LocationResult) {
+    setSelectedStart(result);
+    setStart(result.label);
+    setLocationResults([]);
+    setLocationMessage(undefined);
   }
 
   async function handleExport(format: "gpx" | "maps_link") {
@@ -150,12 +199,44 @@ export default function RoutePlannerView() {
 
             <label className="field start-field">
               <span>Start</span>
-              <input
-                type="text"
-                value={start}
-                onChange={(event) => setStart(event.target.value)}
-              />
+              <div className="location-search">
+                <input
+                  placeholder="Search place or address"
+                  type="text"
+                  value={start}
+                  onChange={(event) => handleStartChange(event.target.value)}
+                />
+                <button
+                  disabled={searchLocations.isPending}
+                  type="button"
+                  onClick={() => void handleLocationSearch()}
+                >
+                  {searchLocations.isPending ? "Searching..." : "Search"}
+                </button>
+              </div>
             </label>
+
+            {selectedStart ? (
+              <p className="selected-location">
+                Selected: {selectedStart.label}
+              </p>
+            ) : null}
+
+            {locationResults.length > 0 ? (
+              <div className="location-results">
+                {locationResults.map((result) => (
+                  <button
+                    key={`${result.lat}-${result.lng}-${result.label}`}
+                    type="button"
+                    onClick={() => selectLocation(result)}
+                  >
+                    <span>{result.label}</span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+
+            {locationMessage ? <p className="inline-note">{locationMessage}</p> : null}
 
             <fieldset className="segmented">
               <legend>Run type</legend>
@@ -405,6 +486,65 @@ const styles = `
 }
 .distance-input span {
   padding-right: 11px;
+}
+.location-search {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.location-search button,
+.location-results button {
+  border: 0;
+  border-radius: 7px;
+  cursor: pointer;
+  font: inherit;
+}
+.location-search button {
+  background: #edf2f7;
+  color: #18243a;
+  font-weight: 750;
+  padding: 0 12px;
+}
+.location-search button:disabled {
+  cursor: progress;
+  opacity: 0.68;
+}
+.location-results {
+  border: 1px solid #d9e0ea;
+  border-radius: 7px;
+  display: grid;
+  overflow: hidden;
+}
+.location-results button {
+  background: #ffffff;
+  color: #25354d;
+  min-height: 38px;
+  padding: 9px 10px;
+  text-align: left;
+}
+.location-results button + button {
+  border-top: 1px solid #d9e0ea;
+}
+.location-results button:hover {
+  background: #f2f7f5;
+}
+.location-results span {
+  display: block;
+  font-size: 13px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.selected-location,
+.inline-note {
+  color: #4c5a6f;
+  font-size: 12px;
+  line-height: 1.35;
+  margin: -4px 0 0;
+  overflow-wrap: anywhere;
+}
+.selected-location {
+  color: #0f6b55;
+  font-weight: 700;
 }
 .segmented {
   border: 0;

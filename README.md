@@ -40,7 +40,7 @@ An MCP server that generates running loops with OpenRouteService, renders the ro
 
 ### open_route_planner
 
-Opens the in-chat route planner without requiring all route details first. Use this for prompts like "plan a run for me" or "make a running route" so the user can fill in the distance, start, run type, and avoid-hills fields directly in the MCP App.
+Opens the in-chat route planner without requiring all route details first. Use this for prompts like "plan a run for me" or "make a running route" so the user can fill in the distance, search/select a start location, choose run type, and set avoid-hills directly in the MCP App.
 
 Example arguments:
 
@@ -58,6 +58,22 @@ Example arguments:
 Generates a foot-walking round trip with OpenRouteService. It retries with up to four random seeds and keeps the closest route if none are within 15% of the requested distance.
 
 The interactive planner calls this tool after the user presses **Plan route**. Results include an inline SVG route map and export buttons. The **Maps link** action displays a clean **Open in Google Maps** link at the bottom instead of a long raw URL.
+
+### search_locations
+
+Searches for a start location by place name, landmark, address, or `lat,lng`. The interactive planner uses this for the **Search** button beside the Start field, then plans from the selected coordinates.
+
+Example arguments:
+
+```json
+{
+  "query": "CN Tower",
+  "limit": 5,
+  "focus_lat": 43.6532,
+  "focus_lng": -79.3832,
+  "boundary_country": "CA"
+}
+```
 
 Example arguments:
 

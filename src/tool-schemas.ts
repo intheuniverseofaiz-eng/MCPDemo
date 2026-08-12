@@ -35,6 +35,47 @@ export const openRoutePlannerOutputSchema = z.object({
   message: z.string(),
 });
 
+export const searchLocationsInputSchema = z.object({
+  query: z
+    .string()
+    .min(2)
+    .describe("Place, landmark, address, or neighbourhood to search for."),
+  limit: z
+    .number()
+    .int()
+    .min(1)
+    .max(8)
+    .optional()
+    .default(5)
+    .describe("Maximum number of location results to return."),
+  focus_lat: z
+    .number()
+    .optional()
+    .default(43.6532)
+    .describe("Latitude used to bias and sort search results by proximity."),
+  focus_lng: z
+    .number()
+    .optional()
+    .default(-79.3832)
+    .describe("Longitude used to bias and sort search results by proximity."),
+  boundary_country: z
+    .string()
+    .optional()
+    .default("CA")
+    .describe("Optional ISO-like country filter for location search, defaulting to Canada."),
+});
+
+export const searchLocationsOutputSchema = z.object({
+  query: z.string(),
+  results: z.array(
+    z.object({
+      label: z.string(),
+      lat: z.number(),
+      lng: z.number(),
+    }),
+  ),
+});
+
 export const planRouteInputSchema = z.object({
   distance_km: z.number().positive().describe("Requested route distance in kilometres."),
   start: z.string().min(1).describe('Start address or coordinates as "lat,lng".'),

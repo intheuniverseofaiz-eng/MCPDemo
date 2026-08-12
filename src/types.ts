@@ -29,6 +29,17 @@ export type RouteSummary = {
   route_map: RouteMap;
 };
 
+export type LocationSearchResult = {
+  label: string;
+  lat: number;
+  lng: number;
+};
+
+export type LocationSearchResponse = {
+  query: string;
+  results: LocationSearchResult[];
+};
+
 export type PlannedRoute = RouteSummary & {
   requested_distance_km: number;
   start_label: string;

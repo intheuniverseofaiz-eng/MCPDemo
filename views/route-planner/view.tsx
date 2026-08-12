@@ -19,43 +19,64 @@ type RouteOutput = {
   };
 };
 
+type PlannerOutput = {
+  distance_km: number;
+  start: string;
+  run_type: RunType;
+  avoid_hills: boolean;
+  message: string;
+};
+
+type ExportState =
+  | {
+      kind: "gpx";
+      path: string;
+      message: string;
+    }
+  | {
+      kind: "maps_link";
+      url: string;
+      message: string;
+    }
+  | {
+      kind: "error";
+      message: string;
+    };
+
 type RunType = "speed" | "long" | "recovery";
 
 const DEFAULT_START = "43.6532,-79.3832";
 
 export default function RoutePlannerView() {
-  const view = useToolContext<"plan_route">();
+  const view = useToolContext<"open_route_planner">();
   const planRoute = useCallTool("plan_route");
   const exportRoute = useCallTool("export_route");
 
+  const plannerDefaults = getPlannerDefaults(view);
   const initialDistance =
-    typeof view.toolInput?.distance_km === "number" ? view.toolInput.distance_km : 5;
-  const initialStart =
-    typeof view.toolInput?.start === "string" ? view.toolInput.start : DEFAULT_START;
-  const initialRunType =
-    typeof view.toolInput?.run_type === "string" ? view.toolInput.run_type : "long";
-  const initialAvoidHills = Boolean(view.toolInput?.avoid_hills);
+    typeof plannerDefaults.distance_km === "number" ? plannerDefaults.distance_km : 5;
+  const initialStart = plannerDefaults.start ?? DEFAULT_START;
+  const initialRunType = plannerDefaults.run_type ?? "long";
+  const initialAvoidHills = Boolean(plannerDefaults.avoid_hills);
 
   const [distanceKm, setDistanceKm] = useState(String(initialDistance));
   const [start, setStart] = useState(initialStart);
   const [runType, setRunType] = useState<RunType>(initialRunType as RunType);
   const [avoidHills, setAvoidHills] = useState(initialAvoidHills);
-  const [activeRoute, setActiveRoute] = useState<RouteOutput | undefined>(
-    view.status === "ready" ? view.toolOutput : undefined,
-  );
-  const [exportMessage, setExportMessage] = useState<string | undefined>();
+  const [activeRoute, setActiveRoute] = useState<RouteOutput | undefined>();
+  const [exportState, setExportState] = useState<ExportState | undefined>();
   const [formError, setFormError] = useState<string | undefined>(
     view.status === "error" ? view.error.message : undefined,
   );
 
-  const route = activeRoute ?? (view.status === "ready" ? view.toolOutput : undefined);
+  const route = activeRoute;
   const isPending = view.status === "pending" || planRoute.isPending;
   const errorMessage = formError ?? planRoute.error?.message;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setFormError(undefined);
-    setExportMessage(undefined);
+    setExportState(undefined);
 
     const parsedDistance = Number(distanceKm);
     if (!Number.isFinite(parsedDistance) || parsedDistance <= 0) {
@@ -78,20 +99,31 @@ export default function RoutePlannerView() {
 
   async function handleExport(format: "gpx" | "maps_link") {
     if (route === undefined) return;
-    setExportMessage(undefined);
+    setExportState(undefined);
     try {
       const result = await exportRoute.callTool({
         route_id: route.route_id,
         format,
       });
       const output = result.structuredContent;
-      setExportMessage(
+      setExportState(
         output.format === "gpx"
-          ? `GPX ready: ${output.path}`
-          : `Approximate Google Maps link: ${output.url}`,
+          ? {
+              kind: "gpx",
+              path: output.path,
+              message: "GPX export is ready.",
+            }
+          : {
+              kind: "maps_link",
+              url: output.url,
+              message: "Approximate Google Maps route is ready.",
+            },
       );
     } catch (error) {
-      setExportMessage(error instanceof Error ? error.message : String(error));
+      setExportState({
+        kind: "error",
+        message: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 
@@ -186,11 +218,42 @@ export default function RoutePlannerView() {
                 Maps link
               </button>
             </div>
-            {exportMessage ? <p className="status">{exportMessage}</p> : null}
+            {exportState ? <ExportResult state={exportState} /> : null}
           </section>
         ) : null}
       </main>
     </ThemeProvider>
+  );
+}
+
+function getPlannerDefaults(
+  view: ReturnType<typeof useToolContext<"open_route_planner">>,
+): Partial<PlannerOutput> {
+  if (view.status === "ready") return view.toolOutput;
+  return view.toolInput ?? {};
+}
+
+function ExportResult({ state }: { state: ExportState }) {
+  if (state.kind === "error") {
+    return <p className="status error">{state.message}</p>;
+  }
+
+  if (state.kind === "maps_link") {
+    return (
+      <div className="status export-result">
+        <span>{state.message}</span>
+        <a href={state.url} rel="noreferrer" target="_blank">
+          Open in Google Maps
+        </a>
+      </div>
+    );
+  }
+
+  return (
+    <div className="status export-result">
+      <span>{state.message}</span>
+      <code>{state.path}</code>
+    </div>
   );
 }
 
@@ -509,6 +572,31 @@ const styles = `
   border: 1px solid #cde3dc;
   border-radius: 7px;
   padding: 10px;
+}
+.export-result {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: space-between;
+}
+.export-result a {
+  background: #0f8b6d;
+  border-radius: 7px;
+  color: #ffffff;
+  font-weight: 750;
+  padding: 9px 12px;
+  text-decoration: none;
+}
+.export-result code {
+  background: #ffffff;
+  border: 1px solid #cde3dc;
+  border-radius: 6px;
+  color: #34445b;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  padding: 7px;
 }
 .status.error {
   background: #fff3f0;

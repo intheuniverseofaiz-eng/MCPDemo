@@ -4,6 +4,37 @@ import { formatPlannerError } from "./ors.js";
 export const runTypeSchema = z.enum(["speed", "long", "recovery"]);
 export const exportFormatSchema = z.enum(["gpx", "maps_link"]);
 
+export const openRoutePlannerInputSchema = z.object({
+  distance_km: z
+    .number()
+    .positive()
+    .optional()
+    .default(5)
+    .describe("Initial distance to prefill in kilometres."),
+  start: z
+    .string()
+    .optional()
+    .default("43.6532,-79.3832")
+    .describe('Initial start address or coordinates to prefill, such as "CN Tower" or "lat,lng".'),
+  run_type: runTypeSchema
+    .optional()
+    .default("long")
+    .describe("Initial route style to preselect."),
+  avoid_hills: z
+    .boolean()
+    .optional()
+    .default(false)
+    .describe("Initial avoid-hills toggle state."),
+});
+
+export const openRoutePlannerOutputSchema = z.object({
+  distance_km: z.number(),
+  start: z.string(),
+  run_type: runTypeSchema,
+  avoid_hills: z.boolean(),
+  message: z.string(),
+});
+
 export const planRouteInputSchema = z.object({
   distance_km: z.number().positive().describe("Requested route distance in kilometres."),
   start: z.string().min(1).describe('Start address or coordinates as "lat,lng".'),

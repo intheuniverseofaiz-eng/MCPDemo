@@ -3,6 +3,8 @@ import { exportRunningRoute, planRunningRoute } from "./src/ors.js";
 import {
   exportRouteInputSchema,
   exportRouteOutputSchema,
+  openRoutePlannerInputSchema,
+  openRoutePlannerOutputSchema,
   planRouteInputSchema,
   planRouteOutputSchema,
   toErrorResult,
@@ -14,7 +16,7 @@ const server = new MCPServer({
   version: "1.0.0",
   description: "Generate and export running routes with OpenRouteService.",
   instructions:
-    "Use plan_route to create a loop from a start address or lat,lng, then use export_route with the returned route_id for GPX or an approximate Google Maps walking link.",
+    "When the user asks to plan, make, or create a running route in chat, use open_route_planner to open the interactive form first. Use plan_route after the user provides details or submits the form. Use export_route with the returned route_id for GPX or an approximate Google Maps walking link.",
   websiteUrl: "https://openrouteservice.org",
   icons: [
     {
@@ -34,6 +36,37 @@ const server = new MCPServer({
   // publicLandingPage: true,
 });
 
+export const openRoutePlanner = server.tool(
+  {
+    name: "open_route_planner",
+    title: "Open route planner",
+    description:
+      "Open an interactive in-chat route planner with distance/start fields, run controls, an inline map, and export actions. Use this when a user says to plan a run or make a running route, especially before all details are known.",
+    inputSchema: openRoutePlannerInputSchema,
+    outputSchema: openRoutePlannerOutputSchema,
+    view: {
+      name: "route-planner",
+      description: "Interactive running route planner with an inline route map",
+      prefersBorder: false,
+    },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
+  },
+  async (input) => {
+    const data = {
+      ...input,
+      message: "Route planner ready. Fill in the fields and press Plan route.",
+    };
+    return {
+      content: [{ type: "text", text: data.message }],
+      structuredContent: data,
+    };
+  },
+);
+
 export const planRoute = server.tool(
   {
     name: "plan_route",
@@ -42,11 +75,6 @@ export const planRoute = server.tool(
       "Generate a running loop of roughly the requested distance from a start address or lat,lng.",
     inputSchema: planRouteInputSchema,
     outputSchema: planRouteOutputSchema,
-    view: {
-      name: "route-planner",
-      description: "Interactive running route planner with an inline route map",
-      prefersBorder: false,
-    },
     annotations: {
       readOnlyHint: false,
       destructiveHint: false,

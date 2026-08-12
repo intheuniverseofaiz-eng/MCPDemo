@@ -42,6 +42,11 @@ export const planRoute = server.tool(
       "Generate a running loop of roughly the requested distance from a start address or lat,lng.",
     inputSchema: planRouteInputSchema,
     outputSchema: planRouteOutputSchema,
+    view: {
+      name: "route-planner",
+      description: "Interactive running route planner with an inline route map",
+      prefersBorder: false,
+    },
     annotations: {
       readOnlyHint: false,
       destructiveHint: false,

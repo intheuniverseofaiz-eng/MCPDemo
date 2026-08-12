@@ -24,6 +24,24 @@ export const planRouteOutputSchema = z.object({
   estimated_time_min: z.number().describe("Estimated walking/running time in minutes."),
   summary: z.string().describe("Short human-readable route summary."),
   route_id: z.string().describe("Identifier for exporting this cached route."),
+  route_map: z
+    .object({
+      points: z
+        .array(
+          z.object({
+            lat: z.number(),
+            lng: z.number(),
+          }),
+        )
+        .describe("Downsampled route coordinates for inline map rendering."),
+      bounds: z.object({
+        north: z.number(),
+        south: z.number(),
+        east: z.number(),
+        west: z.number(),
+      }),
+    })
+    .describe("Route geometry for displaying the route directly in chat."),
 });
 
 export const exportRouteInputSchema = z.object({

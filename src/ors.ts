@@ -7,6 +7,7 @@ import type {
   ExportFormat,
   ExportRouteResult,
   PlannedRoute,
+  RouteMap,
   RouteSummary,
   RunType,
 } from "./types.js";
@@ -348,6 +349,7 @@ function buildPlannedRoute(input: {
     total_distance_km: round(distanceMeters / 1000, 2),
     elevation_gain_m: Math.round(elevationGain),
     estimated_time_min: Math.max(1, Math.round(durationSeconds / 60)),
+    route_map: buildRouteMap(coordinates),
     summary: "",
   };
 
@@ -362,6 +364,7 @@ function toRouteSummary(route: PlannedRoute): RouteSummary {
     estimated_time_min: route.estimated_time_min,
     summary: route.summary,
     route_id: route.route_id,
+    route_map: route.route_map,
   };
 }
 
@@ -458,6 +461,25 @@ function downsample<T>(items: T[], maxItems: number): T[] {
     result.push(items[sourceIndex]);
   }
   return result;
+}
+
+function buildRouteMap(coordinates: Coordinate[]): RouteMap {
+  const points = downsample(coordinates, 240).map((coordinate) => ({
+    lat: round(coordinate.lat, 6),
+    lng: round(coordinate.lng, 6),
+  }));
+  const lats = points.map((point) => point.lat);
+  const lngs = points.map((point) => point.lng);
+
+  return {
+    points,
+    bounds: {
+      north: Math.max(...lats),
+      south: Math.min(...lats),
+      east: Math.max(...lngs),
+      west: Math.min(...lngs),
+    },
+  };
 }
 
 function formatLatLng(coordinate: Coordinate): string {

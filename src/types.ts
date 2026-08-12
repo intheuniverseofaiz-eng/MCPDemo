@@ -7,12 +7,26 @@ export type Coordinate = {
   ele?: number;
 };
 
+export type RouteMap = {
+  points: Array<{
+    lat: number;
+    lng: number;
+  }>;
+  bounds: {
+    north: number;
+    south: number;
+    east: number;
+    west: number;
+  };
+};
+
 export type RouteSummary = {
   total_distance_km: number;
   elevation_gain_m: number;
   estimated_time_min: number;
   summary: string;
   route_id: string;
+  route_map: RouteMap;
 };
 
 export type PlannedRoute = RouteSummary & {

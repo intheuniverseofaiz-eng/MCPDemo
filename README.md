@@ -1,6 +1,6 @@
 # route-planner
 
-An MCP server that generates running loops with OpenRouteService and exports cached routes as GPX or approximate Google Maps walking links.
+An MCP server that generates running loops with OpenRouteService, renders the route inline as an MCP App, and exports cached routes as GPX or approximate Google Maps walking links.
 
 ## Setup
 
@@ -42,6 +42,8 @@ An MCP server that generates running loops with OpenRouteService and exports cac
 
 Generates a foot-walking round trip with OpenRouteService. It retries with up to four random seeds and keeps the closest route if none are within 15% of the requested distance.
 
+In MCP Apps-capable clients, this tool opens an interactive route planner with distance/start inputs, run-type controls, an avoid-hills toggle, an inline SVG route map, and export buttons.
+
 Example arguments:
 
 ```json
@@ -61,7 +63,16 @@ Returns:
   "elevation_gain_m": 42,
   "estimated_time_min": 73,
   "summary": "8.12 km loop from Toronto City Hall; 42 m gain, about 73 min...",
-  "route_id": "route_..."
+  "route_id": "route_...",
+  "route_map": {
+    "points": [{ "lat": 43.6532, "lng": -79.3832 }],
+    "bounds": {
+      "north": 43.66,
+      "south": 43.65,
+      "east": -79.37,
+      "west": -79.39
+    }
+  }
 }
 ```
 
